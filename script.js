@@ -308,16 +308,20 @@ function setupForm() {
         })
       });
       const data = await res.json().catch(() => ({}));
+      const msg = typeof data.message === 'string' ? data.message.toLowerCase() : '';
 
-      // FormSubmit returns success:"true" (string). The first-ever submit also
-      // triggers a one-time activation email, which we treat as a success too.
-      const ok = res.ok && (
-        data.success === 'true' ||
-        data.success === true ||
-        (typeof data.message === 'string' && /confirm|activat|received/i.test(data.message))
-      );
+      // FormSubmit returns success:"true" (string) once the form is activated.
+      const ok = res.ok && (data.success === 'true' || data.success === true);
 
-      if (!ok) throw new Error(data.message || 'Submission failed');
+      if (!ok) {
+        // Surface the REAL reason so this is never a mystery:
+        if (msg.includes('html files') || msg.includes('web server')) {
+          throw new Error('HOSTED_ONLY');
+        } else if (msg.includes('activat') || msg.includes('confirm')) {
+          throw new Error('NEEDS_ACTIVATION');
+        }
+        throw new Error(data.message || 'Submission failed');
+      }
 
       if (success) {
         success.classList.add('show');
@@ -326,7 +330,16 @@ function setupForm() {
       form.reset();
       setTimeout(() => { if (success) success.classList.remove('show'); }, 9000);
     } catch (err) {
-      alert('Sorry, your message could not be sent right now. Please email me directly at mancillakennethwork@gmail.com.');
+      // Show a specific, helpful message based on the actual server response.
+      let text = 'Sorry, your message could not be sent right now. Please email me directly at mancillakennethwork@gmail.com.';
+      if (err.message === 'HOSTED_ONLY') {
+        text = '⚠️ This form only works when the site is hosted live (e.g. on Netlify, GitHub Pages, or Vercel) — it cannot send email when opened as a local file or inside a preview. No email service can. Once the site is published online, this form will deliver to your inbox.';
+      } else if (err.message === 'NEEDS_ACTIVATION') {
+        text = 'Almost there! FormSubmit sent a one-time activation email to mancillakennethwork@gmail.com. Open it and click "Activate Form", then submit again (check your Spam folder too).';
+      } else if (err.message && err.message !== 'Submission failed' && err.name !== 'TypeError') {
+        text = 'Form response: ' + err.message;
+      }
+      alert(text);
     } finally {
       setSubmitting(false);
     }
@@ -363,6 +376,10 @@ function setupBackToTop() {
    Initialise everything once the DOM is ready
    --------------------------------------------------------------------- */
 document.addEventListener('DOMContentLoaded', () => {
+  // Version marker — visible in the browser console (F12 → Console).
+  // If you don't see this on the LIVE site, the deployed code is out of date.
+  console.log('%c Kenneth Mancilla — script v2 (FormSubmit email active) loaded ', 'background:#6c4bf2;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
+
   buildShell();        // inject navbar + footer first
   setupNavbar();       // wire up nav behaviour
   setupReveal();       // scroll animations
