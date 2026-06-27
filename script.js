@@ -79,7 +79,6 @@ const FOOTER_HTML = `
         <li><a href="services.html">Website Design &amp; Dev</a></li>
         <li><a href="services.html">Multimedia &amp; Graphics</a></li>
         <li><a href="services.html">Branding</a></li>
-        <li><a href="contact.html">Get a Quote</a></li>
       </ul>
     </div>
 
