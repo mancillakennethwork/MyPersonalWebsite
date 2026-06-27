@@ -566,6 +566,29 @@ textarea.form-control { resize: vertical; min-height: 140px; }
   .btn-row .btn { flex: 1 1 100%; }
   .hero { padding: 72px 0 76px; }
   .container { padding-inline: 20px; }
+
+  /* ---- Responsive cost table → stacked cards ---- */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }   /* safety net: never breaks layout */
+  .cost-table thead { display: none; }                                    /* hide column headers on mobile */
+  .cost-table, .cost-table tbody, .cost-table tr, .cost-table td { display: block; width: 100%; }
+  .cost-table tr {
+    margin-bottom: 14px; border: 1px solid var(--line); border-radius: var(--radius);
+    background: var(--bg-card); box-shadow: var(--shadow-xs); overflow: hidden;
+  }
+  .cost-table tr:last-child { margin-bottom: 0; }
+  .cost-table td {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+    padding: 13px 16px; border-bottom: 1px solid var(--line-2); text-align: right;
+  }
+  .cost-table td:last-child { border-bottom: none; }
+  .cost-table td::before {
+    content: attr(data-label);
+    font-family: 'Sora', sans-serif; font-weight: 600; font-size: .8rem;
+    letter-spacing: .04em; text-transform: uppercase; color: var(--muted); text-align: left;
+  }
+  /* the long "Best For" description stacks vertically for easy reading */
+  .cost-table td[data-label="Best For"] { flex-direction: column; align-items: flex-start; gap: 5px; text-align: left; }
+  .cost-table td .price { white-space: normal; }   /* allow wrapping if very narrow */
 }
 
 @media (max-width: 400px) {
