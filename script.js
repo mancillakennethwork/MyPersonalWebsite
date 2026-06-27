@@ -248,7 +248,26 @@ function setupForm() {
     });
   });
 
-  form.addEventListener('submit', (e) => {
+  // ---- Real email delivery via FormSubmit.co (no signup / no API key) ----
+  // Messages are forwarded to the address below. Replace the email if needed.
+  const EMAIL_ENDPOINT = 'https://formsubmit.co/ajax/mancillakennethwork@gmail.com';
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const setSubmitting = (state) => {
+    if (!submitBtn) return;
+    if (state) {
+      submitBtn.dataset.resting = submitBtn.innerHTML;   // remember original label
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '.75';
+      submitBtn.innerHTML = 'Sending…';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '';
+      if (submitBtn.dataset.resting) submitBtn.innerHTML = submitBtn.dataset.resting;
+    }
+  };
+
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     let valid = true;
     let firstInvalid = null;
@@ -272,16 +291,45 @@ function setupForm() {
       return;
     }
 
-    // Simulate successful submission (no backend)
+    // Send the message to FormSubmit, which forwards it to email
+    setSubmitting(true);
     const success = document.getElementById('formSuccess');
-    if (success) {
-      success.classList.add('show');
-      success.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    form.reset();
+    try {
+      const res = await fetch(EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          name: document.getElementById('name').value.trim(),
+          email: document.getElementById('email').value.trim(),
+          message: document.getElementById('message').value.trim(),
+          _subject: 'New project enquiry — Portfolio website',
+          _template: 'table',
+          _autoresponse: 'Thanks for reaching out! This is to confirm I received your message. I\'ll reply to you very soon. — Kenneth'
+        })
+      });
+      const data = await res.json().catch(() => ({}));
 
-    // Hide success after a while
-    setTimeout(() => { if (success) success.classList.remove('show'); }, 8000);
+      // FormSubmit returns success:"true" (string). The first-ever submit also
+      // triggers a one-time activation email, which we treat as a success too.
+      const ok = res.ok && (
+        data.success === 'true' ||
+        data.success === true ||
+        (typeof data.message === 'string' && /confirm|activat|received/i.test(data.message))
+      );
+
+      if (!ok) throw new Error(data.message || 'Submission failed');
+
+      if (success) {
+        success.classList.add('show');
+        success.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      form.reset();
+      setTimeout(() => { if (success) success.classList.remove('show'); }, 9000);
+    } catch (err) {
+      alert('Sorry, your message could not be sent right now. Please email me directly at mancillakennethwork@gmail.com.');
+    } finally {
+      setSubmitting(false);
+    }
   });
 }
 
