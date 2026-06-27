@@ -15,9 +15,9 @@
    --------------------------------------------------------------------- */
 const NAV_HTML = `
 <nav class="nav container" aria-label="Primary">
-  <a href="index.html" class="brand" aria-label="Kenneth Mancilla — home">
-    <span class="brand__mark">KM</span>
-    <span class="brand__text">Kenneth<span>.</span></span>
+  <a href="index.html" class="brand" aria-label="KenSaMa — home">
+    <span class="brand__mark">KSM</span>
+    <span class="brand__text">KenSaMa<span>.</span></span>
   </a>
 
   <ul class="nav__links" id="navLinks">
@@ -46,8 +46,8 @@ const FOOTER_HTML = `
   <div class="container footer__grid">
     <div class="footer__brand">
       <a href="index.html" class="brand">
-        <span class="brand__mark">KM</span>
-        <span class="brand__text" style="color:#fff">Kenneth<span>.</span></span>
+        <span class="brand__mark">KSM</span>
+        <span class="brand__text" style="color:#fff">KenSaMa<span>.</span></span>
       </a>
       <p>Freelance web designer &amp; multimedia artist crafting modern, responsive websites and bold visual identities that help businesses grow.</p>
       <div class="footer__social">
@@ -92,8 +92,8 @@ const FOOTER_HTML = `
     </div>
   </div>
   <div class="footer__bottom container">
-    <p>&copy; <span id="year"></span> Kenneth Mancilla. All rights reserved.</p>
-    <p>Designed &amp; developed with care.</p>
+    <p>&copy; <span id="year"></span> KenSaMa. All rights reserved.</p>
+    <p>Designed &amp; developed with care by KenSaMa.</p>
   </div>
 </div>
 
