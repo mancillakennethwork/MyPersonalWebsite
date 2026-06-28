@@ -414,42 +414,10 @@ function setupForm() {
                  + '— Sent from your website contact form'
       });
 
-      // 2) Send an auto-reply to the CLIENT (your chosen wording).
-      // IMPORTANT: skip it when the client used the OWNER's own email — that
-      // happens when you TEST the form with your own Gmail. Otherwise the
-      // auto-reply comes straight back to your inbox and looks like a duplicate.
-      // Real clients (a different address) still get the reply.
-      const isOwnerTest = email.toLowerCase() === OWNER_EMAIL.toLowerCase();
-      let clientReplyStatus = 'skipped (owner test)';
-
-      if (!isOwnerTest) {
-        // Small delay between sends — sending two emails back-to-back from the
-        // same Gmail account can trigger Google's anti-abuse throttling.
-        await new Promise((r) => setTimeout(r, 1500));
-        try {
-          const title = 'Your website project inquiry';
-          await sendEmail({
-            toEmail:  email,                 // ← goes to the CLIENT's address, not yours
-            subject:  'We\'ve received your request — KenSaMa',
-            fromName: 'KenSaMa',
-            replyTo:  OWNER_EMAIL,
-            name:     name,
-            title:    title,
-            body:     'Hi ' + name + ',\n\n'
-                    + 'Thank you for reaching out to us! We have received your request: "'
-                    + title + '", and we\'ll do our best to process it within 3 business days.\n\n'
-                    + 'Best regards,\nKenSaMa'
-          });
-          clientReplyStatus = 'sent OK to ' + email;
-        } catch (clientErr) {
-          // Capture the EXACT reason so we can diagnose Gmail blocking vs spam.
-          const reason = (clientErr && (clientErr.text || clientErr.message)) || JSON.stringify(clientErr);
-          clientReplyStatus = 'FAILED → ' + reason + ' (status ' + (clientErr && clientErr.status) + ')';
-          console.error('CLIENT AUTO-REPLY ERROR:', clientErr);
-        }
-      }
-      // Always log the outcome so you can check it in the browser console (F12).
-      console.log('%c Client auto-reply: ' + clientReplyStatus, 'background:#B8893C;color:#fff;padding:4px 8px;border-radius:5px;');
+      // NOTE: No auto-reply is sent. The contact form sends ONLY this single
+      // inquiry to your inbox (kensama1206@gmail.com). You can reply to the
+      // client directly afterwards — the message includes their email and the
+      // reply_to is set to their address.
 
       if (success) {
         success.classList.add('show');
