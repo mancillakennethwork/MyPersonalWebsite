@@ -44,9 +44,9 @@ const SETTINGS = {
         Content:  {{message_body}}   Reply To: {{reply_to}}
         From Name: {{from_name}}                                     */
   EMAILJS: {
-    PUBLIC_KEY:  '1aNZqnZEKBCQ_jvrV',    // [1] ← replace (Account → Copy Public Key)
-    SERVICE_ID:  'service_kensama',    // [2] ← replace (Email Services → your Gmail)
-    TEMPLATE_ID: 'template_KenSaMa'    // [3] ← replace (Email Templates → your template)
+    PUBLIC_KEY:  '1aNZqnZEKBCQ_jvrV',  // [1] ✓ set
+    SERVICE_ID:  'service_kensama',    // [2] ✓ set
+    TEMPLATE_ID: 'template_KenSaMa'   // [3] ✓ set
   },
 
   /* [4][5][6] HOSTED CHECKOUT LINKS — where the client is sent to pay.
@@ -414,25 +414,26 @@ function setupForm() {
                  + '— Sent from your website contact form'
       });
 
-      // 2) Send an auto-reply CONFIRMATION to the CLIENT (using your chosen wording)
+      // 2) Send an auto-reply to the CLIENT (your chosen wording).
+      // Best-effort: if it ever fails, the owner already has the inquiry,
+      // so the form still succeeds. Gmail can send to third parties, but
+      // the reply may land in the client's Spam folder the first time.
       try {
         const title = 'Your website project inquiry';
         await sendEmail({
-          toEmail:   email,
-          subject:   'We\'ve received your request — KenSaMa',
-          fromName:  'KenSaMa',
-          replyTo:   OWNER_EMAIL,
-          name:      name,
-          title:     title,
-          body:      'Hi ' + name + ',\n\n'
-                   + 'Thank you for reaching out to us! We have received your request: "'
-                   + title + '", and we\'ll do our best to process it within 3 business days.\n\n'
-                   + 'Best regards,\nKenSaMa'
+          toEmail:  email,                 // ← goes to the CLIENT's address, not yours
+          subject:  'We\'ve received your request — KenSaMa',
+          fromName: 'KenSaMa',
+          replyTo:  OWNER_EMAIL,
+          name:     name,
+          title:    title,
+          body:     'Hi ' + name + ',\n\n'
+                  + 'Thank you for reaching out to us! We have received your request: "'
+                  + title + '", and we\'ll do our best to process it within 3 business days.\n\n'
+                  + 'Best regards,\nKenSaMa'
         });
       } catch (clientErr) {
-        // The client confirmation is best-effort — the owner already got the inquiry,
-        // so we don't treat this as a hard failure.
-        console.warn('Could not send client auto-reply:', clientErr);
+        console.warn('Could not send client auto-reply (non-fatal):', clientErr);
       }
 
       if (success) {
