@@ -6,9 +6,74 @@
    - Active navigation highlight
    - Scroll reveal animations (IntersectionObserver)
    - FAQ accordion
-   - Contact form validation
+   - Contact + Payment forms (EmailJS)
    - Smooth anchor scrolling + back-to-top
    ===================================================================== */
+
+
+/* #####################################################################
+   #####################################################################
+        ⚡  OWNER SETTINGS  —  EDIT EVERYTHING YOU NEED HERE  ⚡
+   #####################################################################
+   This is the ONLY place you need to touch. Fill in the values between
+   the quotes (" ") and the links. After editing, save and redeploy.
+
+   ┌──────────────────────────────────────────────────────────────┐
+   │  REPLACE LIST (search these words to jump to each one):      │
+   │                                                              │
+   │  [1]  PUBLIC_KEY     → EmailJS Public Key                    │
+   │  [2]  SERVICE_ID     → EmailJS Service ID (Gmail)            │
+   │  [3]  TEMPLATE_ID    → EmailJS Template ID                   │
+   │  [4]  paymongo link  → PayMongo Payment Link (Bank/GCash/Maya)│
+   │  [5]  paypal.me      → your PayPal.me link                   │
+   │  [6]  wise           → your Wise pay-me link (optional)      │
+   │  [7]  facebook       → your Facebook profile link            │
+   │  [8]  bank name + account name → see payment.html guide      │
+   │       (only needed if you show bank details manually)        │
+   │                                                              │
+   │  EmailJS free signup : https://dashboard.emailjs.com         │
+   │  PayMongo free signup: https://www.paymongo.com              │
+   └──────────────────────────────────────────────────────────────┘
+   ##################################################################### */
+const SETTINGS = {
+
+  /* [1][2][3] EMAILJS — sends the contact + payment emails (free).
+     Create an account, connect Gmail, make ONE template, then paste
+     the 3 IDs here. Template setup:
+        To Email: {{to_email}}   Subject: {{subject}}
+        Content:  {{message_body}}   Reply To: {{reply_to}}
+        From Name: {{from_name}}                                     */
+  EMAILJS: {
+    PUBLIC_KEY:  '1aNZqnZEKBCQ_jvrV',    // [1] ← replace (Account → Copy Public Key)
+    SERVICE_ID:  'service_kensama',    // [2] ← replace (Email Services → your Gmail)
+    TEMPLATE_ID: 'template_KenSaMa'    // [3] ← replace (Email Templates → your template)
+  },
+
+  /* [4][5][6] HOSTED CHECKOUT LINKS — where the client is sent to pay.
+     These are SECURE pages run by the payment provider (not your site),
+     so card/bank details are safe and money goes to your account.        */
+  CHECKOUT: {
+    paymongo: 'https://YOUR_PAYMONGO_LINK',   // [4] ← PayMongo link (Bank + GCash + Maya + Card)
+    paypal:   'https://www.paypal.me/YOUR_USERNAME',  // [5] ← your PayPal.me
+    wise:     'https://wise.com/pay/me/YOUR_HANDLE'   // [6] ← optional
+  },
+
+  /* [7] SOCIAL / CONTACT links */
+  SOCIAL: {
+    facebook: 'https://www.facebook.com/profile.php?id=61575598882519',  // [7] ✓ already set
+    email:    'mancillakennethwork@gmail.com'                             // ✓ already set
+  }
+
+};
+
+/* Shorthand so the rest of the code reads cleanly */
+const EMAILJS     = SETTINGS.EMAILJS;
+const OWNER_EMAIL = SETTINGS.SOCIAL.email;
+
+/* #####################################################################
+        ⚡  END OF OWNER SETTINGS  —  code below, no need to edit  ⚡
+   ##################################################################### */
+
 
 /* ---------------------------------------------------------------------
    Reusable NAVBAR markup
@@ -52,11 +117,11 @@ const FOOTER_HTML = `
       </a>
       <p>Freelance web designer &amp; multimedia artist crafting modern, responsive websites and bold visual identities that help businesses grow.</p>
       <div class="footer__social">
-        <a href="mailto:mancillakennethwork@gmail.com">
+        <a href="mailto:${SETTINGS.SOCIAL.email}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
           Email
         </a>
-        <a href="https://www.facebook.com/profile.php?id=61575598882519" target="_blank" rel="noopener noreferrer">
+        <a href="${SETTINGS.SOCIAL.facebook}" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z"/></svg>
           Facebook
         </a>
@@ -218,35 +283,18 @@ function setupFaq() {
   });
 }
 
-/* =====================================================================
-   EMAILJS — shared email API for the WHOLE site (no server needed)
-   ---------------------------------------------------------------------
-   Configure ONCE here. Both the Contact form and Payment form use it.
-   Create a FREE account at https://dashboard.emailjs.com and paste:
-     • PUBLIC KEY  → Account (top-right) → "Copy Public Key"
-     • SERVICE ID  → Email Services → your Gmail service → its ID
-     • TEMPLATE ID → Email Templates → your template → its ID
-   ---- One FLEXIBLE template is enough for everything. Set it up as:
-        To Email:   {{to_email}}
-        From Name:  {{from_name}}
-        Reply To:   {{reply_to}}
-        Subject:    {{subject}}
-        Content:    {{message_body}}
-        (the client auto-reply also passes {{name}} and {{title}} if you prefer
-         to build the message inside the template using those variables)
-   ===================================================================== */
-const EMAILJS = {
-  PUBLIC_KEY:  '0TExpAW0iJF_ogGu6',
-  SERVICE_ID:  'a_RH0ihvEnfBmpOcyj-aS',
-  TEMPLATE_ID: 'template_KenSaMa'
-};
-const OWNER_EMAIL = 'mancillakennethwork@gmail.com';
-
+/* ---------------------------------------------------------------------
+   EMAILJS helpers — values come from the SETTINGS block at the top.
+   One FLEXIBLE template handles all emails. Template setup:
+        To Email: {{to_email}}   From Name: {{from_name}}
+        Reply To: {{reply_to}}   Subject: {{subject}}
+        Content:  {{message_body}}   (+ optional {{name}} and {{title}})
+   --------------------------------------------------------------------- */
 function emailjsConfigured() {
   return window.emailjs
-    && EMAILJS.PUBLIC_KEY  !== '0TExpAW0iJF_ogGu6'
-    && EMAILJS.SERVICE_ID  !== 'a_RH0ihvEnfBmpOcyj-aS'
-    && EMAILJS.TEMPLATE_ID !== 'template_KenSaMa';
+    && EMAILJS.PUBLIC_KEY  !== 'YOUR_PUBLIC_KEY'
+    && EMAILJS.SERVICE_ID  !== 'YOUR_SERVICE_ID'
+    && EMAILJS.TEMPLATE_ID !== 'YOUR_TEMPLATE_ID';
 }
 
 // Initialise EmailJS once (only on pages that load the SDK)
@@ -416,31 +464,15 @@ function setupPayment() {
   const form = document.getElementById('paymentForm');
   if (!form) return;
 
-  /* ==================================================================
-     CONFIG  — paste your hosted-checkout links + EmailJS keys here
-     ------------------------------------------------------------------
-     HOSTED CHECKOUT LINKS (one per method):
-       • Create a FREE PayMongo account → "Payment Links" → make a link.
-         PayMongo handles Bank, GCash, Maya, Card & QR Ph on ONE secure
-         page, then sends the money to your bank account. Put the SAME
-         PayMongo link in bank / gcash / maya.
-       • PayPal  → your PayPal.me link (https://paypal.me/YourName).
-         The amount is appended automatically.
-       • Wise    → your Wise "request money" / pay-me link (optional).
-     ------------------------------------------------------------------
-     EMAILJS KEYS (free, https://dashboard.emailjs.com):
-       sends the instant "someone is paying" email. See guide in chat.
-     ================================================================== */
+  /* Hosted-checkout links come from the SETTINGS block at the top of this file.
+     PayMongo's single link handles Bank + GCash + Maya + Card. */
   const HOSTED_CHECKOUT = {
-    bank:   'https://YOUR_PAYMONGO_LINK',   // ← PayMongo payment link
-    gcash:  'https://YOUR_PAYMONGO_LINK',   // ← same PayMongo link (or a specific one)
-    maya:   'https://YOUR_PAYMONGO_LINK',   // ← same PayMongo link (or a specific one)
-    paypal: 'https://www.paypal.me/YOUR_USERNAME',  // ← your PayPal.me
-    wise:   'https://wise.com/pay/me/YOUR_HANDLE'   // ← optional
+    bank:   SETTINGS.CHECKOUT.paymongo,
+    gcash:  SETTINGS.CHECKOUT.paymongo,
+    maya:   SETTINGS.CHECKOUT.paymongo,
+    paypal: SETTINGS.CHECKOUT.paypal,
+    wise:   SETTINGS.CHECKOUT.wise
   };
-
-   /* EmailJS keys are shared globally (see the EMAILJS config above).
-     No need to set them again here. */
 
   // Friendly note shown under the method selector
   const PROVIDER_NOTE = {
