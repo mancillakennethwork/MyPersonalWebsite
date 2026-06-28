@@ -26,6 +26,7 @@ const NAV_HTML = `
     <li><a href="services.html">Services</a></li>
     <li><a href="blog.html">Blog</a></li>
     <li><a href="faq.html">FAQ</a></li>
+    <li><a href="payment.html">Payments</a></li>
     <li><a href="contact.html">Contact</a></li>
     <li class="mobile-cta"><a href="contact.html" class="btn btn-primary btn-block">Get a Quote</a></li>
   </ul>
@@ -70,6 +71,7 @@ const FOOTER_HTML = `
         <li><a href="services.html">Services</a></li>
         <li><a href="blog.html">Blog</a></li>
         <li><a href="faq.html">FAQ</a></li>
+        <li><a href="payment.html">Payments</a></li>
       </ul>
     </div>
 
@@ -216,6 +218,58 @@ function setupFaq() {
   });
 }
 
+/* =====================================================================
+   EMAILJS — shared email API for the WHOLE site (no server needed)
+   ---------------------------------------------------------------------
+   Configure ONCE here. Both the Contact form and Payment form use it.
+   Create a FREE account at https://dashboard.emailjs.com and paste:
+     • PUBLIC KEY  → Account (top-right) → "Copy Public Key"
+     • SERVICE ID  → Email Services → your Gmail service → its ID
+     • TEMPLATE ID → Email Templates → your template → its ID
+   ---- One FLEXIBLE template is enough for everything. Set it up as:
+        To Email:   {{to_email}}
+        From Name:  {{from_name}}
+        Reply To:   {{reply_to}}
+        Subject:    {{subject}}
+        Content:    {{message_body}}
+        (the client auto-reply also passes {{name}} and {{title}} if you prefer
+         to build the message inside the template using those variables)
+   ===================================================================== */
+const EMAILJS = {
+  PUBLIC_KEY:  '0TExpAW0iJF_ogGu6',
+  SERVICE_ID:  'a_RH0ihvEnfBmpOcyj-aS',
+  TEMPLATE_ID: 'template_KenSaMa'
+};
+const OWNER_EMAIL = 'mancillakennethwork@gmail.com';
+
+function emailjsConfigured() {
+  return window.emailjs
+    && EMAILJS.PUBLIC_KEY  !== '0TExpAW0iJF_ogGu6'
+    && EMAILJS.SERVICE_ID  !== 'a_RH0ihvEnfBmpOcyj-aS'
+    && EMAILJS.TEMPLATE_ID !== 'template_KenSaMa';
+}
+
+// Initialise EmailJS once (only on pages that load the SDK)
+function initEmailJS() {
+  if (window.emailjs && EMAILJS.PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+    try { emailjs.init({ publicKey: EMAILJS.PUBLIC_KEY }); } catch (e) { /* ignore */ }
+  }
+}
+
+// Send one email through the single flexible template.
+// `name` and `title` are optional — used by the client auto-reply template.
+function sendEmail({ toEmail, subject, body, fromName, replyTo, name, title }) {
+  return emailjs.send(EMAILJS.SERVICE_ID, EMAILJS.TEMPLATE_ID, {
+    to_email:     toEmail,
+    subject:      subject,
+    message_body: body,
+    from_name:    fromName || '',
+    reply_to:     replyTo || '',
+    name:         name || '',
+    title:        title || ''
+  });
+}
+
 /* ---------------------------------------------------------------------
    Contact form validation
    --------------------------------------------------------------------- */
@@ -246,10 +300,6 @@ function setupForm() {
       if (group) clearError(group);
     });
   });
-
-  // ---- Real email delivery via FormSubmit.co (no signup / no API key) ----
-  // Messages are forwarded to the address below. Replace the email if needed.
-  const EMAIL_ENDPOINT = 'https://formsubmit.co/ajax/mancillakennethwork@gmail.com';
 
   const submitBtn = form.querySelector('button[type="submit"]');
   const setSubmitting = (state) => {
@@ -290,36 +340,51 @@ function setupForm() {
       return;
     }
 
-    // Send the message to FormSubmit, which forwards it to email
+    // Make sure the email API is configured before trying to send
+    if (!emailjsConfigured()) {
+      alert('⚠️ The email API is not configured yet.\n\nThe owner needs to add their EmailJS keys in script.js (search for "YOUR_PUBLIC_KEY"). See the setup guide. Until then, please email me directly at ' + OWNER_EMAIL + '.');
+      return;
+    }
+
+    const name    = document.getElementById('name').value.trim();
+    const email   = document.getElementById('email').value.trim();
+    const message = document.getElementById('message').value.trim();
+
     setSubmitting(true);
     const success = document.getElementById('formSuccess');
     try {
-      const res = await fetch(EMAIL_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          name: document.getElementById('name').value.trim(),
-          email: document.getElementById('email').value.trim(),
-          message: document.getElementById('message').value.trim(),
-          _subject: 'New project enquiry — Portfolio website',
-          _template: 'table',
-          _autoresponse: 'Thanks for reaching out! This is to confirm I received your message. I\'ll reply to you very soon. — Kenneth'
-        })
+      // 1) Send the inquiry to the OWNER (you) — so you get the message
+      await sendEmail({
+        toEmail:   OWNER_EMAIL,
+        subject:   '📨 New inquiry from ' + name,
+        fromName:  name,
+        replyTo:   email,
+        body:      'You received a new project inquiry:\n\n'
+                 + 'Name: ' + name + '\n'
+                 + 'Email: ' + email + '\n\n'
+                 + 'Message:\n' + message + '\n\n'
+                 + '— Sent from your website contact form'
       });
-      const data = await res.json().catch(() => ({}));
-      const msg = typeof data.message === 'string' ? data.message.toLowerCase() : '';
 
-      // FormSubmit returns success:"true" (string) once the form is activated.
-      const ok = res.ok && (data.success === 'true' || data.success === true);
-
-      if (!ok) {
-        // Surface the REAL reason so this is never a mystery:
-        if (msg.includes('html files') || msg.includes('web server')) {
-          throw new Error('HOSTED_ONLY');
-        } else if (msg.includes('activat') || msg.includes('confirm')) {
-          throw new Error('NEEDS_ACTIVATION');
-        }
-        throw new Error(data.message || 'Submission failed');
+      // 2) Send an auto-reply CONFIRMATION to the CLIENT (using your chosen wording)
+      try {
+        const title = 'Your website project inquiry';
+        await sendEmail({
+          toEmail:   email,
+          subject:   'We\'ve received your request — KenSaMa',
+          fromName:  'KenSaMa',
+          replyTo:   OWNER_EMAIL,
+          name:      name,
+          title:     title,
+          body:      'Hi ' + name + ',\n\n'
+                   + 'Thank you for reaching out to us! We have received your request: "'
+                   + title + '", and we\'ll do our best to process it within 3 business days.\n\n'
+                   + 'Best regards,\nKenSaMa'
+        });
+      } catch (clientErr) {
+        // The client confirmation is best-effort — the owner already got the inquiry,
+        // so we don't treat this as a hard failure.
+        console.warn('Could not send client auto-reply:', clientErr);
       }
 
       if (success) {
@@ -329,19 +394,179 @@ function setupForm() {
       form.reset();
       setTimeout(() => { if (success) success.classList.remove('show'); }, 9000);
     } catch (err) {
-      // Show a specific, helpful message based on the actual server response.
-      let text = 'Sorry, your message could not be sent right now. Please email me directly at mancillakennethwork@gmail.com.';
-      if (err.message === 'HOSTED_ONLY') {
-        text = '⚠️ This form only works when the site is hosted live (e.g. on Netlify, GitHub Pages, or Vercel) — it cannot send email when opened as a local file or inside a preview. No email service can. Once the site is published online, this form will deliver to your inbox.';
-      } else if (err.message === 'NEEDS_ACTIVATION') {
-        text = 'Almost there! FormSubmit sent a one-time activation email to mancillakennethwork@gmail.com. Open it and click "Activate Form", then submit again (check your Spam folder too).';
-      } else if (err.message && err.message !== 'Submission failed' && err.name !== 'TypeError') {
-        text = 'Form response: ' + err.message;
-      }
-      alert(text);
+      console.error('EmailJS error:', err);
+      alert('Sorry, your message could not be sent right now (' + (err && err.text ? err.text : 'network error') + ').\n\nPlease email me directly at ' + OWNER_EMAIL + '.');
     } finally {
       setSubmitting(false);
     }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   Payment page: method tabs, copy buttons, notification form
+   --------------------------------------------------------------------- */
+/* =====================================================================
+   PAYMENT PAGE — EmailJS API integration
+   ---------------------------------------------------------------------
+   This sends an email DIRECTLY from JavaScript (no server needed).
+   To activate it you must create a FREE EmailJS account and paste your
+   3 keys below. Full step-by-step guide is in the chat after the code.
+   ===================================================================== */
+function setupPayment() {
+  const form = document.getElementById('paymentForm');
+  if (!form) return;
+
+  /* ==================================================================
+     CONFIG  — paste your hosted-checkout links + EmailJS keys here
+     ------------------------------------------------------------------
+     HOSTED CHECKOUT LINKS (one per method):
+       • Create a FREE PayMongo account → "Payment Links" → make a link.
+         PayMongo handles Bank, GCash, Maya, Card & QR Ph on ONE secure
+         page, then sends the money to your bank account. Put the SAME
+         PayMongo link in bank / gcash / maya.
+       • PayPal  → your PayPal.me link (https://paypal.me/YourName).
+         The amount is appended automatically.
+       • Wise    → your Wise "request money" / pay-me link (optional).
+     ------------------------------------------------------------------
+     EMAILJS KEYS (free, https://dashboard.emailjs.com):
+       sends the instant "someone is paying" email. See guide in chat.
+     ================================================================== */
+  const HOSTED_CHECKOUT = {
+    bank:   'https://YOUR_PAYMONGO_LINK',   // ← PayMongo payment link
+    gcash:  'https://YOUR_PAYMONGO_LINK',   // ← same PayMongo link (or a specific one)
+    maya:   'https://YOUR_PAYMONGO_LINK',   // ← same PayMongo link (or a specific one)
+    paypal: 'https://www.paypal.me/YOUR_USERNAME',  // ← your PayPal.me
+    wise:   'https://wise.com/pay/me/YOUR_HANDLE'   // ← optional
+  };
+
+   /* EmailJS keys are shared globally (see the EMAILJS config above).
+     No need to set them again here. */
+
+  // Friendly note shown under the method selector
+  const PROVIDER_NOTE = {
+    bank:   "You'll be redirected to PayMongo's secure page to pay by bank transfer, GCash, Maya, or card.",
+    gcash:  "You'll be redirected to PayMongo's secure page to pay via GCash.",
+    maya:   "You'll be redirected to PayMongo's secure page to pay via Maya.",
+    paypal: "You'll be redirected to PayPal's secure checkout to complete your payment.",
+    wise:   "You'll be redirected to Wise's secure page to complete your transfer."
+  };
+
+  /* EmailJS is initialised globally via initEmailJS(). */
+
+  /* ---- A · Method tabs: track the chosen method + update the note ---- */
+  const methodCards   = document.querySelectorAll('.method-card');
+  const methodInput   = document.getElementById('p-method');
+  const providerNote  = document.getElementById('providerNote');
+  let chosenMethod    = 'bank';
+
+  const setActiveMethod = (key) => {
+    chosenMethod = key;
+    methodCards.forEach((c) => c.classList.toggle('active', c.dataset.method === key));
+    const card = [...methodCards].find((c) => c.dataset.method === key);
+    if (methodInput && card && card.dataset.label) methodInput.value = card.dataset.label;
+    if (providerNote && PROVIDER_NOTE[key]) providerNote.textContent = PROVIDER_NOTE[key];
+  };
+  methodCards.forEach((card) => card.addEventListener('click', () => setActiveMethod(card.dataset.method)));
+
+  /* ---- B · Validation helpers ---- */
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const setGroupError = (input, message) => {
+    const group = input.closest('.form-group');
+    if (!group) return;
+    group.classList.add('invalid');
+    const err = group.querySelector('.field-error');
+    if (err && message) err.textContent = message;
+  };
+  const clearError = (input) => input.closest('.form-group')?.classList.remove('invalid');
+
+  const nameEl    = document.getElementById('p-name');
+  const emailEl   = document.getElementById('p-email');
+  const purposeEl = document.getElementById('p-purpose');
+  const amountEl  = document.getElementById('p-amount');
+  const noteEl    = document.getElementById('p-note');
+
+  [nameEl, emailEl, amountEl].forEach((el) => { if (el) el.addEventListener('input', () => clearError(el)); });
+  if (purposeEl) purposeEl.addEventListener('change', () => clearError(purposeEl));
+
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const setButton = (html, disabled) => {
+    if (!submitBtn) return;
+    submitBtn.innerHTML = html;
+    submitBtn.disabled = !!disabled;
+    submitBtn.style.opacity = disabled ? '.75' : '';
+  };
+  const RESTING_HTML = 'Continue to Secure Checkout <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+
+  /* ---- C · Build the hosted checkout URL for the chosen method ---- */
+  const buildCheckoutUrl = (method, amount) => {
+    let url = HOSTED_CHECKOUT[method] || HOSTED_CHECKOUT.bank;
+    if (url.indexOf('YOUR_') !== -1) return null;            // owner hasn't configured it yet
+    // PayPal.me supports an amount suffix: paypal.me/username/500
+    if (method === 'paypal' && amount && /paypal\.me\/[^/]+$/i.test(url)) {
+      url = url.replace(/\/$/, '') + '/' + amount;
+    }
+    return url;
+  };
+
+  /* ---- D · Submit → notify (EmailJS) + redirect to hosted checkout ---- */
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let valid = true;
+
+    if (!nameEl.value.trim() || nameEl.value.trim().length < 2) { setGroupError(nameEl, 'Please enter your name.'); valid = false; }
+    if (!emailRegex.test(emailEl.value.trim())) { setGroupError(emailEl, 'Please enter a valid email address.'); valid = false; }
+    if (!purposeEl.value) { setGroupError(purposeEl, 'Please choose a payment purpose.'); valid = false; }
+    const amt = parseFloat(amountEl.value);
+    if (isNaN(amt) || amt <= 0) { setGroupError(amountEl, 'Please enter a valid amount.'); valid = false; }
+
+    if (!valid) {
+      form.querySelector('.form-group.invalid')?.querySelector('input,select,textarea')?.focus();
+      return;
+    }
+
+    // Must have a hosted-checkout link configured for this method
+    const checkoutUrl = buildCheckoutUrl(chosenMethod, amt);
+    if (!checkoutUrl) {
+      alert('⚠️ Online checkout for "' + (methodInput ? methodInput.value : chosenMethod) + '" is not set up yet.\n\nThe owner needs to add a hosted payment link in script.js (search for "YOUR_PAYMONGO_LINK"). Meanwhile, please email me at ' + OWNER_EMAIL + '.');
+      return;
+    }
+
+    const amountStr = '₱' + amt.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const noteStr   = noteEl.value.trim() || '—';
+    const success   = document.getElementById('paySuccess');
+    const methodLabel = methodInput ? methodInput.value : chosenMethod;
+
+    // 1) Send the instant notification email (so you know a payment is incoming)
+    setButton('Redirecting…', true);
+    if (success) { success.classList.add('show'); success.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+    // Best-effort notification email — don't let it block the checkout redirect
+    try {
+      if (emailjsConfigured()) {
+        await sendEmail({
+          toEmail:  OWNER_EMAIL,
+          subject:  '💰 ' + purposeEl.value + ' — ' + methodLabel + ' checkout started (' + amountStr + ')',
+          fromName: nameEl.value.trim(),
+          replyTo:  emailEl.value.trim(),
+          body:     'A client started a secure checkout:\n\n'
+                 + 'Name: ' + nameEl.value.trim() + '\n'
+                 + 'Email: ' + emailEl.value.trim() + '\n'
+                 + 'Purpose: ' + purposeEl.value + '\n'
+                 + 'Method: ' + methodLabel + '\n'
+                 + 'Amount: ' + amountStr + '\n'
+                 + 'Message: ' + noteStr + '\n\n'
+                 + '— Sent from your website payment form'
+        });
+      } else {
+        console.warn('EmailJS not configured — skipping notification email. Redirecting to checkout anyway.');
+      }
+    } catch (err) {
+      console.error('EmailJS error (non-fatal):', err);
+      // Don't block payment — still redirect to checkout
+    }
+
+    // 2) Redirect to the provider's secure hosted checkout
+    setTimeout(() => { window.location.href = checkoutUrl; }, 700);
   });
 }
 
@@ -377,13 +602,15 @@ function setupBackToTop() {
 document.addEventListener('DOMContentLoaded', () => {
   // Version marker — visible in the browser console (F12 → Console).
   // If you don't see this on the LIVE site, the deployed code is out of date.
-  console.log('%c Kenneth Mancilla — script v2 (FormSubmit email active) loaded ', 'background:#6c4bf2;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
+  console.log('%c KenSaMa — script v3 (EmailJS active) loaded ', 'background:#7A4F2C;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
 
   buildShell();        // inject navbar + footer first
+  initEmailJS();       // initialise the email API (safe on pages without the SDK)
   setupNavbar();       // wire up nav behaviour
   setupReveal();       // scroll animations
   setupFaq();          // FAQ accordion
   setupForm();         // contact form validation
+  setupPayment();      // payment tabs, copy buttons, notification form
   setupSmoothScroll(); // anchor links
   setupBackToTop();    // back-to-top button
 });
