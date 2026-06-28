@@ -1,12 +1,12 @@
 /* =====================================================================
-   Kenneth Mancilla — Portfolio & Services
+   KenSaMa — Portfolio & Services
    script.js  |  Vanilla JavaScript only (no libraries)
    - Reusable navbar + footer injection
    - Mobile hamburger menu
    - Active navigation highlight
    - Scroll reveal animations (IntersectionObserver)
    - FAQ accordion
-   - Contact + Payment forms (EmailJS)
+   - Contact + Payment forms (FormSubmit — free & unlimited)
    - Smooth anchor scrolling + back-to-top
    ===================================================================== */
 
@@ -21,53 +21,42 @@
    ┌──────────────────────────────────────────────────────────────┐
    │  REPLACE LIST (search these words to jump to each one):      │
    │                                                              │
-   │  [1]  PUBLIC_KEY     → EmailJS Public Key                    │
-   │  [2]  SERVICE_ID     → EmailJS Service ID (Gmail)            │
-   │  [3]  TEMPLATE_ID    → EmailJS Template ID                   │
-   │  [4]  paymongo link  → PayMongo Payment Link (Bank/GCash/Maya)│
-   │  [5]  paypal.me      → your PayPal.me link                   │
-   │  [6]  wise           → your Wise pay-me link (optional)      │
-   │  [7]  facebook       → your Facebook profile link            │
-   │  [8]  bank name + account name → see payment.html guide      │
-   │       (only needed if you show bank details manually)        │
+   │  [1]  contact email  → kensama1206@gmail.com (already set)   │
+   │  [2]  paymongo link  → PayMongo Payment Link (Bank/GCash/Maya)│
+   │  [3]  paypal.me      → your PayPal.me link                   │
+   │  [4]  wise           → your Wise pay-me link (optional)      │
+   │  [5]  facebook       → your Facebook profile link            │
    │                                                              │
-   │  EmailJS free signup : https://dashboard.emailjs.com         │
+   │  EMAILS use FormSubmit (free + unlimited, no signup).        │
+   │  The FIRST submission triggers a one-time activation email   │
+   │  to [1] — open it and click "Activate Form". Done forever.   │
+   │  FormSubmit ONLY works on a LIVE site (http/https), not a    │
+   │  local file:// — test via VS Code Live Server or after deploy.│
+   │                                                              │
    │  PayMongo free signup: https://www.paymongo.com              │
    └──────────────────────────────────────────────────────────────┘
    ##################################################################### */
 const SETTINGS = {
 
-  /* [1][2][3] EMAILJS — sends the contact + payment emails (free).
-     Create an account, connect Gmail, make ONE template, then paste
-     the 3 IDs here. Template setup:
-        To Email: {{to_email}}   Subject: {{subject}}
-        Content:  {{message_body}}   Reply To: {{reply_to}}
-        From Name: {{from_name}}                                     */
-  EMAILJS: {
-    PUBLIC_KEY:  '1aNZqnZEKBCQ_jvrV',  // [1] ✓ set
-    SERVICE_ID:  'service_kensama',    // [2] ✓ set
-    TEMPLATE_ID: 'template_KenSaMa'   // [3] ✓ set
+  /* [1] CONTACT EMAIL — where contact + payment notifications arrive.
+     Using FormSubmit (free, unlimited, no signup/account needed). */
+  SOCIAL: {
+    email:    'kensama1206@gmail.com',                                       // [1] ✓
+    facebook: 'https://www.facebook.com/profile.php?id=61575598882519'       // [5] ✓
   },
 
-  /* [4][5][6] HOSTED CHECKOUT LINKS — where the client is sent to pay.
+  /* [2][3][4] HOSTED CHECKOUT LINKS — where the client is sent to pay.
      These are SECURE pages run by the payment provider (not your site),
      so card/bank details are safe and money goes to your account.        */
   CHECKOUT: {
-    paymongo: 'https://YOUR_PAYMONGO_LINK',   // [4] ← PayMongo link (Bank + GCash + Maya + Card)
-    paypal:   'https://www.paypal.me/YOUR_USERNAME',  // [5] ← your PayPal.me
-    wise:     'https://wise.com/pay/me/YOUR_HANDLE'   // [6] ← optional
-  },
-
-  /* [7] SOCIAL / CONTACT links */
-  SOCIAL: {
-    facebook: 'https://www.facebook.com/profile.php?id=61575598882519',  // [7] ✓ already set
-    email:    'kensama1206@gmail.com'                                    // ✓ contact email
+    paymongo: 'https://YOUR_PAYMONGO_LINK',   // [2] ← PayMongo link (Bank + GCash + Maya + Card)
+    paypal:   'https://www.paypal.me/YOUR_USERNAME',  // [3] ← your PayPal.me
+    wise:     'https://wise.com/pay/me/YOUR_HANDLE'   // [4] ← optional
   }
 
 };
 
 /* Shorthand so the rest of the code reads cleanly */
-const EMAILJS     = SETTINGS.EMAILJS;
 const OWNER_EMAIL = SETTINGS.SOCIAL.email;
 
 /* #####################################################################
@@ -284,38 +273,43 @@ function setupFaq() {
 }
 
 /* ---------------------------------------------------------------------
-   EMAILJS helpers — values come from the SETTINGS block at the top.
-   One FLEXIBLE template handles all emails. Template setup:
-        To Email: {{to_email}}   From Name: {{from_name}}
-        Reply To: {{reply_to}}   Subject: {{subject}}
-        Content:  {{message_body}}   (+ optional {{name}} and {{title}})
+   FormSubmit helper — sends emails for the WHOLE site.
+   FormSubmit is FREE + UNLIMITED and needs NO signup/account.
+   The recipient email is SETTINGS.SOCIAL.email (kensama1206@gmail.com).
+
+   ⚠️ FIRST-TIME ACTIVATION:
+      The very first submission triggers a one-time activation email to
+      kensama1206@gmail.com. Open it and click "Activate Form". After that,
+      every submission is delivered. (Happens once per recipient email.)
+
+   ⚠️ FormSubmit only works on a LIVE site (http/https). It will refuse
+      to send when the page is opened as a local file:// (file browsed).
    --------------------------------------------------------------------- */
-function emailjsConfigured() {
-  return window.emailjs
-    && EMAILJS.PUBLIC_KEY  !== 'YOUR_PUBLIC_KEY'
-    && EMAILJS.SERVICE_ID  !== 'YOUR_SERVICE_ID'
-    && EMAILJS.TEMPLATE_ID !== 'YOUR_TEMPLATE_ID';
-}
-
-// Initialise EmailJS once (only on pages that load the SDK)
-function initEmailJS() {
-  if (window.emailjs && EMAILJS.PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
-    try { emailjs.init({ publicKey: EMAILJS.PUBLIC_KEY }); } catch (e) { /* ignore */ }
-  }
-}
-
-// Send one email through the single flexible template.
-// `name` and `title` are optional — used by the client auto-reply template.
-function sendEmail({ toEmail, subject, body, fromName, replyTo, name, title }) {
-  return emailjs.send(EMAILJS.SERVICE_ID, EMAILJS.TEMPLATE_ID, {
-    to_email:     toEmail,
-    subject:      subject,
-    message_body: body,
-    from_name:    fromName || '',
-    reply_to:     replyTo || '',
-    name:         name || '',
-    title:        title || ''
-  });
+function submitFormSubmit({ toEmail, subject, fields }) {
+  const endpoint = 'https://formsubmit.co/ajax/' + encodeURIComponent(toEmail);
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+    body: JSON.stringify({
+      _subject: subject,   // email subject line
+      _template: 'table',  // render fields as a neat table
+      ...fields
+    })
+  }).then((res) => res.json().catch(() => ({})).then((data) => {
+    // FormSubmit returns success:"true" (string) once activated.
+    const msg = (typeof data.message === 'string' ? data.message : '').toLowerCase();
+    const ok = res.ok && (data.success === 'true' || data.success === true);
+    if (!ok) {
+      if (msg.includes('html files') || msg.includes('web server')) {
+        throw new Error('HOSTED_ONLY');   // opened as a local file
+      }
+      if (msg.includes('activat') || msg.includes('confirm')) {
+        throw new Error('NEEDS_ACTIVATION'); // first-time activation required
+      }
+      throw new Error(data.message || 'Submission failed');
+    }
+    return true;
+  }));
 }
 
 /* ---------------------------------------------------------------------
@@ -388,12 +382,6 @@ function setupForm() {
       return;
     }
 
-    // Make sure the email API is configured before trying to send
-    if (!emailjsConfigured()) {
-      alert('⚠️ The email API is not configured yet.\n\nThe owner needs to add their EmailJS keys in script.js (search for "YOUR_PUBLIC_KEY"). See the setup guide. Until then, please email me directly at ' + OWNER_EMAIL + '.');
-      return;
-    }
-
     const name    = document.getElementById('name').value.trim();
     const email   = document.getElementById('email').value.trim();
     const message = document.getElementById('message').value.trim();
@@ -401,23 +389,12 @@ function setupForm() {
     setSubmitting(true);
     const success = document.getElementById('formSuccess');
     try {
-      // 1) Send the inquiry to the OWNER (you) — so you get the message
-      await sendEmail({
-        toEmail:   OWNER_EMAIL,
-        subject:   '📨 New inquiry from ' + name,
-        fromName:  name,
-        replyTo:   email,
-        body:      'You received a new project inquiry:\n\n'
-                 + 'Name: ' + name + '\n'
-                 + 'Email: ' + email + '\n\n'
-                 + 'Message:\n' + message + '\n\n'
-                 + '— Sent from your website contact form'
+      // Send ONLY the inquiry to your inbox (kensama1206@gmail.com) — no auto-reply.
+      await submitFormSubmit({
+        toEmail:  OWNER_EMAIL,
+        subject:  '📨 New inquiry from ' + name,
+        fields:   { name: name, email: email, message: message }
       });
-
-      // NOTE: No auto-reply is sent. The contact form sends ONLY this single
-      // inquiry to your inbox (kensama1206@gmail.com). You can reply to the
-      // client directly afterwards — the message includes their email and the
-      // reply_to is set to their address.
 
       if (success) {
         success.classList.add('show');
@@ -426,8 +403,14 @@ function setupForm() {
       form.reset();
       setTimeout(() => { if (success) success.classList.remove('show'); }, 9000);
     } catch (err) {
-      console.error('EmailJS error:', err);
-      alert('Sorry, your message could not be sent right now (' + (err && err.text ? err.text : 'network error') + ').\n\nPlease email me directly at ' + OWNER_EMAIL + '.');
+      // Surface the REAL reason so this is never a mystery.
+      let text = 'Sorry, your message could not be sent right now. Please email me directly at ' + OWNER_EMAIL + '.';
+      if (err.message === 'HOSTED_ONLY') {
+        text = '⚠️ This form only works when the site is hosted live (e.g. Vercel, Netlify) — it cannot send email when opened as a local file (file://). Publish the site online, then it will deliver to ' + OWNER_EMAIL + '.';
+      } else if (err.message === 'NEEDS_ACTIVATION') {
+        text = '✅ Almost there! FormSubmit sent a one-time activation email to ' + OWNER_EMAIL + '.\n\nOpen it and click "Activate Form", then submit again (check your Spam folder too). This only happens once.';
+      }
+      alert(text);
     } finally {
       setSubmitting(false);
     }
@@ -466,8 +449,6 @@ function setupPayment() {
     paypal: "You'll be redirected to PayPal's secure checkout to complete your payment.",
     wise:   "You'll be redirected to Wise's secure page to complete your transfer."
   };
-
-  /* EmailJS is initialised globally via initEmailJS(). */
 
   /* ---- A · Method tabs: track the chosen method + update the note ---- */
   const methodCards   = document.querySelectorAll('.method-card');
@@ -558,26 +539,20 @@ function setupPayment() {
 
     // Best-effort notification email — don't let it block the checkout redirect
     try {
-      if (emailjsConfigured()) {
-        await sendEmail({
-          toEmail:  OWNER_EMAIL,
-          subject:  '💰 ' + purposeEl.value + ' — ' + methodLabel + ' checkout started (' + amountStr + ')',
-          fromName: nameEl.value.trim(),
-          replyTo:  emailEl.value.trim(),
-          body:     'A client started a secure checkout:\n\n'
-                 + 'Name: ' + nameEl.value.trim() + '\n'
-                 + 'Email: ' + emailEl.value.trim() + '\n'
-                 + 'Purpose: ' + purposeEl.value + '\n'
-                 + 'Method: ' + methodLabel + '\n'
-                 + 'Amount: ' + amountStr + '\n'
-                 + 'Message: ' + noteStr + '\n\n'
-                 + '— Sent from your website payment form'
-        });
-      } else {
-        console.warn('EmailJS not configured — skipping notification email. Redirecting to checkout anyway.');
-      }
+      await submitFormSubmit({
+        toEmail:  OWNER_EMAIL,
+        subject:  '💰 ' + purposeEl.value + ' — ' + methodLabel + ' checkout started (' + amountStr + ')',
+        fields: {
+          name:    nameEl.value.trim(),
+          email:   emailEl.value.trim(),
+          purpose: purposeEl.value,
+          method:  methodLabel,
+          amount:  amountStr,
+          message: noteStr
+        }
+      });
     } catch (err) {
-      console.error('EmailJS error (non-fatal):', err);
+      console.warn('Could not send payment notification (non-fatal):', err.message);
       // Don't block payment — still redirect to checkout
     }
 
@@ -618,10 +593,9 @@ function setupBackToTop() {
 document.addEventListener('DOMContentLoaded', () => {
   // Version marker — visible in the browser console (F12 → Console).
   // If you don't see this on the LIVE site, the deployed code is out of date.
-  console.log('%c KenSaMa — script v3 (EmailJS active) loaded ', 'background:#7A4F2C;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
+  console.log('%c KenSaMa — script v4 (FormSubmit active) loaded ', 'background:#7A4F2C;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
 
   buildShell();        // inject navbar + footer first
-  initEmailJS();       // initialise the email API (safe on pages without the SDK)
   setupNavbar();       // wire up nav behaviour
   setupReveal();       // scroll animations
   setupFaq();          // FAQ accordion
