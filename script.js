@@ -61,7 +61,7 @@ const SETTINGS = {
   /* [7] SOCIAL / CONTACT links */
   SOCIAL: {
     facebook: 'https://www.facebook.com/profile.php?id=61575598882519',  // [7] ✓ already set
-    email:    'mancillakennethwork@gmail.com'                             // ✓ already set
+    email:    'kensama1206@gmail.com'                                    // ✓ contact email
   }
 
 };
@@ -152,7 +152,7 @@ const FOOTER_HTML = `
     <div class="footer__col">
       <h4>Get in touch</h4>
       <ul>
-        <li><a href="mailto:mancillakennethwork@gmail.com">mancillakennethwork@gmail.com</a></li>
+        <li><a href="mailto:${SETTINGS.SOCIAL.email}">${SETTINGS.SOCIAL.email}</a></li>
         <li>Facebook: Ken Ken</li>
         <li>Available for freelance projects</li>
       </ul>
