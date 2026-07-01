@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="KenSaMa logo">
+  <defs>
+    <linearGradient id="ksmBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7A4F2C"/>
+      <stop offset="0.55" stop-color="#5C3D2E"/>
+      <stop offset="1" stop-color="#2B1E12"/>
+    </linearGradient>
+    <linearGradient id="ksmFg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F6ECD6"/>
+      <stop offset="1" stop-color="#C9A876"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#ksmBg)"/>
+  <rect x="30" y="30" width="452" height="452" rx="92" fill="none" stroke="#C9A876" stroke-opacity="0.22" stroke-width="3"/>
+  <text x="256" y="324" text-anchor="middle"
+        font-family="'Arial Black','Helvetica Neue',Helvetica,Arial,sans-serif"
+        font-size="190" font-weight="900" letter-spacing="-6" fill="url(#ksmFg)">KSM</text>
+</svg>
