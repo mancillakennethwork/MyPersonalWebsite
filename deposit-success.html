@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deposit Received — KenSaMa</title>
+  <meta name="description" content="Your deposit has been received. The remaining balance is due after your website is finalized." />
+  <link rel="icon" href="Logo/kensama-logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="pay-success reveal" style="max-width: 640px; margin: 20px auto 0;">
+          <div class="pay-success__icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          </div>
+          <h1>Deposit received! 🎉</h1>
+          <p>Thank you — your ₱5,000 deposit has been received. I'll get started on your website right away.</p>
+
+          <div class="pay-success__notice">
+            <strong>Your order: <span id="orderId">—</span></strong>
+            Save this order ID. The remaining balance will be requested once your website is finalized.
+          </div>
+
+          <div class="btn-row" style="justify-content: center;">
+            <a href="index.html" class="btn btn-primary">Back to Home</a>
+            <a href="contact.html" class="btn btn-outline">Contact Me</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="script.js"></script>
+  <script>
+    // Show the order ID from the ?order= query param PayMongo appended.
+    const orderId = new URLSearchParams(window.location.search).get('order');
+    if (orderId) document.getElementById('orderId').textContent = orderId;
+  </script>
+</body>
+</html>

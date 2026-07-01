@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download Logo — KenSaMa</title>
+  <meta name="description" content="Download the KenSaMa logo as PNG or JPG in multiple sizes for use on any platform — social media, documents, print, and apps." />
+  <link rel="icon" href="Logo/kensama-logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <!-- ================= PAGE HERO ================= -->
+    <section class="page-hero">
+      <div class="hero__bg" aria-hidden="true"><span class="grid-dots"></span></div>
+      <div class="container" style="position:relative;z-index:1;">
+        <nav class="breadcrumbs reveal"><a href="index.html">Home</a> / <span>Logo Kit</span></nav>
+        <span class="eyebrow reveal">Brand Assets</span>
+        <h1 class="reveal" data-delay="80">Download the <span class="gradient-text">KenSaMa logo</span></h1>
+        <p class="reveal" data-delay="160">Get the logo as a PNG or JPG in any size — ready for social media, documents, print, apps, and more. Files are generated right in your browser and download instantly.</p>
+      </div>
+    </section>
+
+    <!-- ================= LOGO PREVIEW ================= -->
+    <section class="section">
+      <div class="container logo-tool">
+
+        <!-- live preview -->
+        <div class="logo-preview reveal">
+          <div class="logo-preview__swatch logo-preview__swatch--dark">
+            <img id="previewImg" src="Logo/kensama-logo.svg" alt="KenSaMa logo preview" width="140" height="140" />
+            <span class="logo-preview__cap">Logo on dark</span>
+          </div>
+          <div class="logo-preview__swatch logo-preview__swatch--light">
+            <img src="Logo/kensama-logo.svg" alt="KenSaMa logo preview" width="140" height="140" />
+            <span class="logo-preview__cap">Logo on light</span>
+          </div>
+        </div>
+
+        <!-- export controls -->
+        <div class="form-card logo-card reveal" data-delay="120">
+          <h2 style="font-size:1.4rem;">Export settings</h2>
+          <p style="margin-bottom:24px;">Choose a size and format, then download.</p>
+
+          <!-- size -->
+          <div class="form-group">
+            <label>Size <span style="color:var(--muted-2);font-weight:400;">(square, pixels)</span></label>
+            <div class="chip-group" id="sizeGroup">
+              <button type="button" class="chip" data-size="64">64px</button>
+              <button type="button" class="chip" data-size="128">128px</button>
+              <button type="button" class="chip" data-size="256">256px</button>
+              <button type="button" class="chip active" data-size="512">512px</button>
+              <button type="button" class="chip" data-size="1024">1024px</button>
+              <button type="button" class="chip" data-size="2048">2048px</button>
+            </div>
+          </div>
+
+          <!-- background -->
+          <div class="form-group">
+            <label>Background</label>
+            <div class="chip-group" id="bgGroup">
+              <button type="button" class="chip active" data-bg="transparent">Transparent <small>(PNG)</small></button>
+              <button type="button" class="chip" data-bg="white">White</button>
+              <button type="button" class="chip" data-bg="dark">Dark</button>
+            </div>
+          </div>
+
+          <!-- logo variant -->
+          <div class="form-group">
+            <label>Variant</label>
+            <div class="chip-group" id="varGroup">
+              <button type="button" class="chip active" data-var="Logo/kensama-logo.svg">Monogram (KSM)</button>
+              <button type="button" class="chip" data-var="Logo/kensama-wordmark.svg">Wordmark (KenSaMa)</button>
+            </div>
+            <p style="font-size:.84rem;color:var(--muted-2);margin-top:8px;">The wordmark is wider — it will be scaled to fit within your chosen square size.</p>
+          </div>
+
+          <!-- download buttons -->
+          <div class="btn-row logo-download-row">
+            <button type="button" class="btn btn-pop btn-block" id="dlPng">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+              Download PNG
+            </button>
+            <button type="button" class="btn btn-outline btn-block" id="dlJpg">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+              Download JPG
+            </button>
+          </div>
+          <p class="logo-hint" id="exportStatus">Ready to download.</p>
+
+          <!-- quick batch -->
+          <div class="logo-batch reveal">
+            <h3>Need everything at once?</h3>
+            <p>Download a full PNG pack — 256, 512 &amp; 1024px (transparent) in one click.</p>
+            <button type="button" class="btn btn-outline" id="dlBatch">Download PNG Pack (3 sizes)</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- also: raw SVG -->
+    <section class="section section--alt">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Vector</span>
+          <h2>Need a scalable logo?</h2>
+          <p>The SVG version stays crisp at any size — perfect for websites, large prints, and editing. Right-click to save.</p>
+        </div>
+        <div class="btn-row" style="justify-content:center;">
+          <a href="Logo/kensama-logo.svg" download class="btn btn-primary">Download Monogram SVG</a>
+          <a href="Logo/kensama-wordmark.svg" download class="btn btn-outline">Download Wordmark SVG</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="script.js"></script>
+
+  <!-- Logo conversion logic: renders the SVG to a <canvas> and saves PNG/JPG -->
+  <script>
+    (function () {
+      var size = 512, bg = 'transparent', variant = 'Logo/kensama-logo.svg';
+
+      // helper: read which chip is active in a group
+      function readGroup(groupId) {
+        var el = document.querySelector('#' + groupId + ' .chip.active');
+        return el ? el.dataset.size || el.dataset.bg || el.dataset.var : null;
+      }
+      function setGroup(groupId, btn) {
+        document.querySelectorAll('#' + groupId + ' .chip').forEach(function (c) { c.classList.remove('active'); });
+        btn.classList.add('active');
+      }
+
+      document.querySelectorAll('#sizeGroup .chip').forEach(function (b) {
+        b.addEventListener('click', function () { setGroup('sizeGroup', b); size = Number(b.dataset.size); });
+      });
+      document.querySelectorAll('#bgGroup .chip').forEach(function (b) {
+        b.addEventListener('click', function () { setGroup('bgGroup', b); bg = b.dataset.bg; });
+      });
+      document.querySelectorAll('#varGroup .chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+          setGroup('varGroup', b); variant = b.dataset.var;
+          document.getElementById('previewImg').src = variant;
+        });
+      });
+
+      var status = document.getElementById('exportStatus');
+
+      // Render the SVG to a canvas, then trigger a download
+      function render(src, px, background, mime, filename) {
+        return new Promise(function (resolve, reject) {
+          var img = new Image();
+          img.onload = function () {
+            var canvas = document.createElement('canvas');
+            canvas.width = px; canvas.height = px;
+            var ctx = canvas.getContext('2d');
+
+            // JPG cannot be transparent — always paint a background
+            if (background === 'transparent' && mime === 'image/jpeg') background = 'white';
+            if (background === 'white') { ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0, 0, px, px); }
+            if (background === 'dark')  { ctx.fillStyle = '#2B1E12'; ctx.fillRect(0, 0, px, px); }
+
+            // fit the logo within the square with a small margin (preserve aspect ratio)
+            var pad = px * 0.06;
+            var avail = px - pad * 2;
+            var iw = img.width, ih = img.height;
+            var scale = avail / Math.max(iw, ih);
+            var dw = iw * scale, dh = ih * scale;
+            var dx = (px - dw) / 2, dy = (px - dh) / 2;
+            ctx.drawImage(img, dx, dy, dw, dh);
+
+            canvas.toBlob(function (blob) {
+              if (!blob) { reject(new Error('Could not generate image.')); return; }
+              var url = URL.createObjectURL(blob);
+              var a = document.createElement('a');
+              a.href = url; a.download = filename;
+              document.body.appendChild(a); a.click(); a.remove();
+              setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+              resolve();
+            }, mime, 0.95);
+          };
+          img.onerror = function () { reject(new Error('Could not load the logo SVG.')); };
+          img.src = src;
+        });
+      }
+
+      function busy(btn, text) { if (!btn) return; btn.dataset.rest = btn.innerHTML; btn.innerHTML = text; btn.disabled = true; btn.style.opacity = '.75'; }
+      function rest(btn) { if (!btn) return; btn.innerHTML = btn.dataset.rest || btn.innerHTML; btn.disabled = false; btn.style.opacity = ''; }
+
+      document.getElementById('dlPng').addEventListener('click', async function () {
+        var btn = this; busy(btn, 'Generating…');
+        try {
+          await render(variant, size, bg, 'image/png', 'kensama-logo-' + size + '.png');
+          status.textContent = '✅ Downloaded kensama-logo-' + size + '.png';
+        } catch (e) { status.textContent = '⚠️ ' + e.message; }
+        rest(btn);
+      });
+
+      document.getElementById('dlJpg').addEventListener('click', async function () {
+        var btn = this; busy(btn, 'Generating…');
+        try {
+          await render(variant, size, bg, 'image/jpeg', 'kensama-logo-' + size + '.jpg');
+          status.textContent = '✅ Downloaded kensama-logo-' + size + '.jpg';
+        } catch (e) { status.textContent = '⚠️ ' + e.message; }
+        rest(btn);
+      });
+
+      document.getElementById('dlBatch').addEventListener('click', async function () {
+        var btn = this; busy(btn, 'Packing…'); status.textContent = 'Generating pack…';
+        try {
+          var sizes = [256, 512, 1024];
+          for (var i = 0; i < sizes.length; i++) {
+            await render('Logo/kensama-logo.svg', sizes[i], 'transparent', 'image/png', 'kensama-logo-' + sizes[i] + '.png');
+            await new Promise(function (r) { setTimeout(r, 500); }); // small gap so the browser saves each
+          }
+          status.textContent = '✅ PNG pack downloaded (256, 512, 1024px).';
+        } catch (e) { status.textContent = '⚠️ ' + e.message; }
+        rest(btn);
+      });
+    })();
+  </script>
+</body>
+</html>

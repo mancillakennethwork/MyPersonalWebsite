@@ -22,12 +22,20 @@
    │  REPLACE LIST (search these words to jump to each one):      │
    │                                                              │
    │  [1]  contact email  → kensama1206@gmail.com (already set)   │
-   │  [2]  paymongo link  → PayMongo Payment Link (Bank/GCash/Maya)│
-   │  [3]  paypal.me      → your PayPal.me link                   │
-   │  [4]  wise           → your Wise pay-me link (optional)      │
-   │  [5]  facebook       → your Facebook profile link            │
+   │  [2]  paymongo link  → STATIC FALLBACK only (already set).   │
+   │       Real checkout now uses the PayMongo API + Upstash DB + │
+   │       webhook (deposit → balance flow). Set in Vercel:       │
+   │         PAYMONGO_SECRET_KEY        (sk_live_...)             │
+   │         PAYMONGO_WEBHOOK_SECRET                                │
+   │         UPSTASH_REDIS_REST_URL     (https://xx.upstash.io)   │
+   │         UPSTASH_REDIS_REST_TOKEN   (xxxxxxxxxxxx)            │
+   │         ADMIN_TOKEN                (any secret you choose)   │
+   │         OWNER_EMAIL                (kensama1206@gmail.com)   │
+   │         SITE_URL                   (https://kensama.com)     │
+   │       EMAILS reuse FormSubmit (already active — no new keys).│
+   │  [3]  facebook       → your Facebook profile link            │
    │                                                              │
-   │  EMAILS use FormSubmit (free + unlimited, no signup).        │
+   │  See the full setup guide in the chat (deposit+balance flow).│
    │  The FIRST submission triggers a one-time activation email   │
    │  to [1] — open it and click "Activate Form". Done forever.   │
    │  FormSubmit ONLY works on a LIVE site (http/https), not a    │
@@ -45,13 +53,17 @@ const SETTINGS = {
     facebook: 'https://www.facebook.com/profile.php?id=61575598882519'       // [5] ✓
   },
 
-  /* [2][3][4] HOSTED CHECKOUT LINKS — where the client is sent to pay.
-     These are SECURE pages run by the payment provider (not your site),
-     so card/bank details are safe and money goes to your account.        */
-  CHECKOUT: {
-    paymongo: 'https://YOUR_PAYMONGO_LINK',   // [2] ← PayMongo link (Bank + GCash + Maya + Card)
-    paypal:   'https://www.paypal.me/YOUR_USERNAME',  // [3] ← your PayPal.me
-    wise:     'https://wise.com/pay/me/YOUR_HANDLE'   // [4] ← optional
+   /* PAYMONGO PAYMENT PAGES — one hosted page per fixed amount.
+      These work instantly with NO API keys / database needed. */
+   CHECKOUT: {
+    /* The ₱5,000 upfront deposit (also Tier 1 full price). */
+    upfront:   'https://paymongo.page/l/upfront',
+    /* Full-price pages for each tier: */
+    tier1:     'https://paymongo.page/l/starterpage',       // ₱5,000
+    tier2:     'https://paymongo.page/l/basicpage',         // ₱20,000
+    tier3:     'https://paymongo.page/l/professionalpage',  // ₱40,000
+    /* Generic fallback (used for Website Update ₱2,000 if the API isn't set). */
+    paymongo:  'https://pm.link/org-kAJmabWoKVdUY8YVRxWyYDXp/E6uPWjx'
   }
 
 };
@@ -70,7 +82,7 @@ const OWNER_EMAIL = SETTINGS.SOCIAL.email;
 const NAV_HTML = `
 <nav class="nav container" aria-label="Primary">
   <a href="index.html" class="brand" aria-label="KenSaMa — home">
-    <span class="brand__mark">KSM</span>
+    <img class="brand__mark" src="Logo/kensama-logo.svg" alt="KenSaMa logo" width="44" height="44" />
     <span class="brand__text">KenSaMa<span>.</span></span>
   </a>
 
@@ -101,10 +113,10 @@ const FOOTER_HTML = `
   <div class="container footer__grid">
     <div class="footer__brand">
       <a href="index.html" class="brand">
-        <span class="brand__mark">KSM</span>
+        <img class="brand__mark" src="Logo/kensama-logo.svg" alt="KenSaMa logo" width="44" height="44" />
         <span class="brand__text" style="color:#fff">KenSaMa<span>.</span></span>
       </a>
-      <p>Freelance web designer &amp; multimedia artist crafting modern, responsive websites and bold visual identities that help businesses grow.</p>
+      <p>Freelance web designer &amp; developer crafting modern, responsive websites that help businesses grow.</p>
       <div class="footer__social">
         <a href="mailto:${SETTINGS.SOCIAL.email}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
@@ -133,8 +145,8 @@ const FOOTER_HTML = `
       <h4>Services</h4>
       <ul>
         <li><a href="services.html">Website Design &amp; Dev</a></li>
-        <li><a href="services.html">Multimedia &amp; Graphics</a></li>
-        <li><a href="services.html">Branding</a></li>
+        <li><a href="services.html">Website Updates</a></li>
+        <li><a href="services.html">Pricing Tiers</a></li>
       </ul>
     </div>
 
@@ -418,54 +430,47 @@ function setupForm() {
 }
 
 /* ---------------------------------------------------------------------
-   Payment page: method tabs, copy buttons, notification form
-   --------------------------------------------------------------------- */
-/* =====================================================================
-   PAYMENT PAGE — EmailJS API integration
+   Payment page — stepped checkout wizard
    ---------------------------------------------------------------------
-   This sends an email DIRECTLY from JavaScript (no server needed).
-   To activate it you must create a FREE EmailJS account and paste your
-   3 keys below. Full step-by-step guide is in the chat after the code.
-   ===================================================================== */
+   Flow:  details  →  method  →  purpose (+tier)  →  review  →  pay
+     • Website Development  → ₱5,000 upfront deposit, balance due after
+       finalization (based on the chosen tier's full price).
+     • Website Update       → ₱2,000 flat.
+   On submit: notify owner (FormSubmit) then redirect to PayMongo.
+   --------------------------------------------------------------------- */
 function setupPayment() {
   const form = document.getElementById('paymentForm');
   if (!form) return;
 
-  /* Hosted-checkout links come from the SETTINGS block at the top of this file.
-     PayMongo's single link handles Bank + GCash + Maya + Card. */
-  const HOSTED_CHECKOUT = {
-    bank:   SETTINGS.CHECKOUT.paymongo,
-    gcash:  SETTINGS.CHECKOUT.paymongo,
-    maya:   SETTINGS.CHECKOUT.paymongo,
-    paypal: SETTINGS.CHECKOUT.paypal,
-    wise:   SETTINGS.CHECKOUT.wise
+  /* ---- Pricing model ---- */
+  const TIERS = {
+    1: { name: 'Starter',      full: 5000 },
+    2: { name: 'Basic',        full: 20000 },
+    3: { name: 'Professional', full: 40000 }
+  };
+  const DEPOSIT     = 5000;   // upfront cost charged for Website Development
+  const UPDATE_PRICE = 2000;  // flat cost charged for Website Updates
+  const peso = (n) => '₱' + Number(n).toLocaleString('en-PH');
+
+  /* ---- Wizard state ---- */
+  let currentStep = 1;
+  const state = { method: 'qrph', methodLabel: 'QR Ph', purpose: '', tier: 0 };
+
+  const panels   = document.querySelectorAll('.pay-step-panel');
+  const progFill = document.getElementById('progFill');
+  const progSteps = document.querySelectorAll('.pay-progress__steps .pay-step');
+
+  /* Show a given step and update the progress bar */
+  const goToStep = (n) => {
+    currentStep = n;
+    panels.forEach((p) => p.classList.toggle('active', Number(p.dataset.step) === n));
+    if (progFill) progFill.style.width = (n / 4 * 100) + '%';
+    progSteps.forEach((s) => s.classList.toggle('active', Number(s.dataset.prog) <= n));
+    const card = document.querySelector('.pay-form');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  // Friendly note shown under the method selector
-  const PROVIDER_NOTE = {
-    bank:   "You'll be redirected to PayMongo's secure page to pay by bank transfer, GCash, Maya, or card.",
-    gcash:  "You'll be redirected to PayMongo's secure page to pay via GCash.",
-    maya:   "You'll be redirected to PayMongo's secure page to pay via Maya.",
-    paypal: "You'll be redirected to PayPal's secure checkout to complete your payment.",
-    wise:   "You'll be redirected to Wise's secure page to complete your transfer."
-  };
-
-  /* ---- A · Method tabs: track the chosen method + update the note ---- */
-  const methodCards   = document.querySelectorAll('.method-card');
-  const methodInput   = document.getElementById('p-method');
-  const providerNote  = document.getElementById('providerNote');
-  let chosenMethod    = 'bank';
-
-  const setActiveMethod = (key) => {
-    chosenMethod = key;
-    methodCards.forEach((c) => c.classList.toggle('active', c.dataset.method === key));
-    const card = [...methodCards].find((c) => c.dataset.method === key);
-    if (methodInput && card && card.dataset.label) methodInput.value = card.dataset.label;
-    if (providerNote && PROVIDER_NOTE[key]) providerNote.textContent = PROVIDER_NOTE[key];
-  };
-  methodCards.forEach((card) => card.addEventListener('click', () => setActiveMethod(card.dataset.method)));
-
-  /* ---- B · Validation helpers ---- */
+  /* ---- Validation helpers ---- */
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const setGroupError = (input, message) => {
     const group = input.closest('.form-group');
@@ -476,88 +481,184 @@ function setupPayment() {
   };
   const clearError = (input) => input.closest('.form-group')?.classList.remove('invalid');
 
-  const nameEl    = document.getElementById('p-name');
-  const emailEl   = document.getElementById('p-email');
-  const purposeEl = document.getElementById('p-purpose');
-  const amountEl  = document.getElementById('p-amount');
-  const noteEl    = document.getElementById('p-note');
+  const nameEl  = document.getElementById('p-name');
+  const emailEl = document.getElementById('p-email');
+  if (nameEl)  nameEl.addEventListener('input', () => clearError(nameEl));
+  if (emailEl) emailEl.addEventListener('input', () => clearError(emailEl));
 
-  [nameEl, emailEl, amountEl].forEach((el) => { if (el) el.addEventListener('input', () => clearError(el)); });
-  if (purposeEl) purposeEl.addEventListener('change', () => clearError(purposeEl));
-
-  const submitBtn = form.querySelector('button[type="submit"]');
-  const setButton = (html, disabled) => {
-    if (!submitBtn) return;
-    submitBtn.innerHTML = html;
-    submitBtn.disabled = !!disabled;
-    submitBtn.style.opacity = disabled ? '.75' : '';
-  };
-  const RESTING_HTML = 'Continue to Secure Checkout <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
-
-  /* ---- C · Build the hosted checkout URL for the chosen method ---- */
-  const buildCheckoutUrl = (method, amount) => {
-    let url = HOSTED_CHECKOUT[method] || HOSTED_CHECKOUT.bank;
-    if (url.indexOf('YOUR_') !== -1) return null;            // owner hasn't configured it yet
-    // PayPal.me supports an amount suffix: paypal.me/username/500
-    if (method === 'paypal' && amount && /paypal\.me\/[^/]+$/i.test(url)) {
-      url = url.replace(/\/$/, '') + '/' + amount;
+  const validateStep = (n) => {
+    if (n === 1) {
+      let ok = true;
+      if (!nameEl.value.trim() || nameEl.value.trim().length < 2) { setGroupError(nameEl, 'Please enter your name.'); ok = false; }
+      if (!emailRegex.test(emailEl.value.trim())) { setGroupError(emailEl, 'Please enter a valid email address.'); ok = false; }
+      return ok;
     }
-    return url;
+    if (n === 2) return !!state.method;                       // always set (defaults to QR Ph)
+    if (n === 3) {
+      if (!state.purpose) { alert('Please choose what you are paying for.'); return false; }
+      if (state.purpose === 'dev' && !state.tier) {
+        const tierError = document.getElementById('tierError');
+        if (tierError) tierError.style.display = 'block';
+        document.getElementById('tierBlock')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      return true;
+    }
+    return true;
   };
 
-  /* ---- D · Submit → notify (EmailJS) + redirect to hosted checkout ---- */
+  /* ---- Selection: payment method ---- */
+  const methodCards = document.querySelectorAll('#methodGroup .method-card');
+  methodCards.forEach((card) => card.addEventListener('click', () => {
+    state.method = card.dataset.method;
+    state.methodLabel = card.dataset.label;
+    methodCards.forEach((c) => c.classList.remove('active'));
+    card.classList.add('active');
+  }));
+
+  /* ---- Selection: purpose (with conditional tier block) ---- */
+  const purposeCards = document.querySelectorAll('#purposeGroup .method-card');
+  const tierBlock = document.getElementById('tierBlock');
+  purposeCards.forEach((card) => card.addEventListener('click', () => {
+    purposeCards.forEach((c) => c.classList.remove('active'));
+    card.classList.add('active');
+    state.purpose = card.dataset.purpose;
+    state.tier = 0;                                          // reset tier on purpose change
+    document.querySelectorAll('#tierGroup .tier-pick').forEach((t) => t.classList.remove('active'));
+    if (state.purpose === 'dev') {
+      if (tierBlock) tierBlock.hidden = false;              // show tier chooser
+    } else {
+      if (tierBlock) tierBlock.hidden = true;               // updates don't need a tier
+    }
+  }));
+
+  /* ---- Selection: tier ---- */
+  const tierCards = document.querySelectorAll('#tierGroup .tier-pick');
+  tierCards.forEach((card) => card.addEventListener('click', () => {
+    state.tier = Number(card.dataset.tier);
+    tierCards.forEach((t) => t.classList.remove('active'));
+    card.classList.add('active');
+    const tierError = document.getElementById('tierError');
+    if (tierError) tierError.style.display = 'none';
+  }));
+
+  /* ---- Build the review summary + compute amounts ---- */
+  const updateSummary = () => {
+    document.getElementById('sum-method').textContent  = state.methodLabel;
+    document.getElementById('sum-purpose').textContent = state.purpose === 'dev' ? 'Website Development' : state.purpose === 'update' ? 'Website Update' : '—';
+
+    const tierRow  = document.getElementById('sum-tier-row');
+    const fullRow  = document.getElementById('sum-full-row');
+    const balRow   = document.getElementById('sum-bal-row');
+    const payBtn   = document.getElementById('payNowBtn');
+    let dueNow = 0, balance = 0;
+
+    if (state.purpose === 'dev' && state.tier) {
+      const t = TIERS[state.tier];
+      tierRow.hidden = false;
+      document.getElementById('sum-tier').textContent = 'Tier ' + state.tier + ' — ' + t.name;
+      fullRow.hidden = false;
+      document.getElementById('sum-full').textContent = peso(t.full);
+      dueNow = DEPOSIT;
+      balance = Math.max(0, t.full - DEPOSIT);
+      balRow.hidden = false;
+      document.getElementById('sum-bal').textContent = peso(balance) + ' (due after finalization)';
+    } else {
+      tierRow.hidden = true;
+      fullRow.hidden = true;
+      balRow.hidden = true;
+      dueNow = UPDATE_PRICE;
+    }
+    document.getElementById('sum-now').textContent = peso(dueNow);
+    state.amountNow = dueNow;                                // remember for the email
+    if (payBtn) payBtn.textContent = 'Pay ' + peso(dueNow) + ' Now →';
+    return dueNow;
+  };
+
+  /* ---- Back / Next buttons ---- */
+  form.querySelectorAll('[data-next]').forEach((btn) => btn.addEventListener('click', () => {
+    const from = Number(btn.dataset.next);
+    if (!validateStep(from)) return;
+    if (from === 3) updateSummary();                         // refresh review before showing it
+    goToStep(from + 1);
+  }));
+  form.querySelectorAll('[data-prev]').forEach((btn) => btn.addEventListener('click', () => {
+    goToStep(Number(btn.dataset.prev) - 1);
+  }));
+
+  /* ---- Submit → notify owner (FormSubmit) + redirect to PayMongo ---- */
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    let valid = true;
+    if (!validateStep(3)) { goToStep(3); return; }
+    const dueNow = updateSummary();
 
-    if (!nameEl.value.trim() || nameEl.value.trim().length < 2) { setGroupError(nameEl, 'Please enter your name.'); valid = false; }
-    if (!emailRegex.test(emailEl.value.trim())) { setGroupError(emailEl, 'Please enter a valid email address.'); valid = false; }
-    if (!purposeEl.value) { setGroupError(purposeEl, 'Please choose a payment purpose.'); valid = false; }
-    const amt = parseFloat(amountEl.value);
-    if (isNaN(amt) || amt <= 0) { setGroupError(amountEl, 'Please enter a valid amount.'); valid = false; }
+    const name  = nameEl.value.trim();
+    const email = emailEl.value.trim();
+    const purposeLabel = state.purpose === 'dev' ? 'Website Development' : 'Website Update';
+    const tierLabel = (state.purpose === 'dev' && state.tier)
+      ? 'Tier ' + state.tier + ' — ' + TIERS[state.tier].name + ' (' + peso(TIERS[state.tier].full) + ')'
+      : '—';
+    const description = purposeLabel + (tierLabel !== '—' ? ' — ' + tierLabel : '');
 
-    if (!valid) {
-      form.querySelector('.form-group.invalid')?.querySelector('input,select,textarea')?.focus();
-      return;
-    }
-
-    // Must have a hosted-checkout link configured for this method
-    const checkoutUrl = buildCheckoutUrl(chosenMethod, amt);
-    if (!checkoutUrl) {
-      alert('⚠️ Online checkout for "' + (methodInput ? methodInput.value : chosenMethod) + '" is not set up yet.\n\nThe owner needs to add a hosted payment link in script.js (search for "YOUR_PAYMONGO_LINK"). Meanwhile, please email me at ' + OWNER_EMAIL + '.');
-      return;
-    }
-
-    const amountStr = '₱' + amt.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const noteStr   = noteEl.value.trim() || '—';
-    const success   = document.getElementById('paySuccess');
-    const methodLabel = methodInput ? methodInput.value : chosenMethod;
-
-    // 1) Send the instant notification email (so you know a payment is incoming)
-    setButton('Redirecting…', true);
+    const success = document.getElementById('paySuccess');
+    const payBtn = document.getElementById('payNowBtn');
+    if (payBtn) { payBtn.disabled = true; payBtn.style.opacity = '.75'; payBtn.textContent = 'Redirecting…'; }
     if (success) { success.classList.add('show'); success.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 
-    // Best-effort notification email — don't let it block the checkout redirect
+    let redirectUrl = null;
+    let apiError = null;
     try {
-      await submitFormSubmit({
-        toEmail:  OWNER_EMAIL,
-        subject:  '💰 ' + purposeEl.value + ' — ' + methodLabel + ' checkout started (' + amountStr + ')',
-        fields: {
-          name:    nameEl.value.trim(),
-          email:   emailEl.value.trim(),
-          purpose: purposeEl.value,
-          method:  methodLabel,
-          amount:  amountStr,
-          message: noteStr
-        }
+      // Create a PayMongo Checkout Session with the EXACT amount + client metadata.
+      // The metadata flows to /api/paymongo-webhook after payment succeeds.
+      const res = await fetch('/api/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purpose:    state.purpose,       // "dev" | "update"
+          tier:       state.tier,          // 1-4 (for dev) — server computes the deposit + total
+          clientName: name,
+          clientEmail: email,
+          method: state.methodLabel
+        })
       });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.checkoutUrl) {
+        redirectUrl = data.checkoutUrl;
+      } else {
+        console.warn('create-checkout did not return a URL:', data);
+        apiError = data.error || data.detail || 'Checkout could not be created.';
+      }
     } catch (err) {
-      console.warn('Could not send payment notification (non-fatal):', err.message);
-      // Don't block payment — still redirect to checkout
+      console.warn('create-checkout request failed (non-fatal):', err.message);
+      apiError = err.message;
     }
 
-    // 2) Redirect to the provider's secure hosted checkout
-    setTimeout(() => { window.location.href = checkoutUrl; }, 700);
+    // Fallback: if the API isn't configured, use the dedicated PayMongo page
+    // for this payment (deposit → upfront page; update → generic link).
+    if (!redirectUrl) {
+      const pages = SETTINGS.CHECKOUT || {};
+      redirectUrl = state.purpose === 'dev' ? (pages.upfront || pages.paymongo) : pages.paymongo;
+      if (!redirectUrl || redirectUrl.indexOf('YOUR_') !== -1) {
+        if (payBtn) { payBtn.disabled = false; payBtn.style.opacity = ''; payBtn.textContent = 'Pay ' + peso(dueNow) + ' Now →'; }
+        alert('⚠️ Online checkout is not set up yet.\n\n' + (apiError ? 'Server: ' + apiError + '\n\n' : '') + 'Add your PayMongo links in script.js (see the setup guide). Meanwhile, email me at ' + OWNER_EMAIL + '.');
+        return;
+      }
+    }
+
+    // Open the PayMongo secure hosted checkout in a NEW TAB
+    // (keeps your website open so the client can return easily)
+    setTimeout(() => {
+      window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+      // Update the message + button so the client knows what happened and can reopen the tab
+      const msg = document.getElementById('successMsg');
+      if (msg) msg.textContent = 'Secure checkout opened in a new tab. Complete your payment there. (If it didn\'t open, tap the button below.)';
+      if (payBtn) {
+        payBtn.disabled = false;
+        payBtn.style.opacity = '';
+        payBtn.textContent = 'Re-open checkout';
+        payBtn.onclick = () => window.open(redirectUrl, '_blank', 'noopener,noreferrer');
+      }
+    }, 700);
   });
 }
 
@@ -593,7 +694,7 @@ function setupBackToTop() {
 document.addEventListener('DOMContentLoaded', () => {
   // Version marker — visible in the browser console (F12 → Console).
   // If you don't see this on the LIVE site, the deployed code is out of date.
-  console.log('%c KenSaMa — script v4 (FormSubmit active) loaded ', 'background:#7A4F2C;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
+  console.log('%c KenSaMa — script v6 (deposit + balance flow active) loaded ', 'background:#7A4F2C;color:#fff;padding:5px 9px;border-radius:5px;font-weight:bold;');
 
   buildShell();        // inject navbar + footer first
   setupNavbar();       // wire up nav behaviour

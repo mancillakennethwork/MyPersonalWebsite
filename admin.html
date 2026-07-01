@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Orders — KenSaMa Admin</title>
+  <meta name="description" content="View payment orders and send balance requests." />
+  <link rel="icon" href="Logo/kensama-logo.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <main>
+    <section class="page-hero">
+      <div class="hero__bg" aria-hidden="true"><span class="grid-dots"></span></div>
+      <div class="container" style="position:relative;z-index:1;">
+        <span class="eyebrow reveal">Admin</span>
+        <h1 class="reveal" data-delay="80">Orders &amp; <span class="gradient-text">balances</span></h1>
+        <p class="reveal" data-delay="160">Enter your admin token to view orders and send balance-payment links to clients after their website is finalized.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container" style="max-width:860px;">
+        <!-- login -->
+        <div class="form-card reveal" id="loginCard">
+          <h2 style="font-size:1.3rem;">Admin login</h2>
+          <p style="margin-bottom:18px;">This is the ADMIN_TOKEN you set in Vercel environment variables.</p>
+          <div class="form-group">
+            <label for="adminToken">Admin token</label>
+            <input type="password" id="adminToken" class="form-control" placeholder="Paste your admin token" />
+          </div>
+          <button type="button" class="btn btn-pop" id="loginBtn">View orders</button>
+          <p class="field-error" id="loginError" style="display:block;margin-top:12px;"></p>
+        </div>
+
+        <!-- orders -->
+        <div id="ordersWrap" hidden>
+          <div class="btn-row" style="justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h2 style="font-size:1.3rem;">Orders</h2>
+            <div class="btn-row">
+              <button type="button" class="btn btn-outline" id="refreshBtn">Refresh</button>
+              <button type="button" class="btn btn-ghost" id="logoutBtn">Logout</button>
+            </div>
+          </div>
+          <div id="ordersList"></div>
+          <p class="muted" id="emptyMsg" hidden style="text-align:center;padding:30px;">No orders yet.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="site-footer"></footer>
+  <script src="script.js"></script>
+  <script>
+    let TOKEN = '';
+    const $ = (id) => document.getElementById(id);
+
+    function fmt(n){ return '₱' + Number(n||0).toLocaleString('en-PH'); }
+
+    function badge(label, on){
+      const c = on ? '#EBF0E0/#5E8536' : '#F4ECE0/#A07A4A';
+      const [bg,fg] = c.split('/');
+      return `<span style="display:inline-block;font-family:Sora,sans-serif;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:100px;background:${bg};color:${fg}">${label}: ${on?'YES':'no'}</span>`;
+    }
+
+    async function loadOrders(){
+      $('ordersList').innerHTML = '<p class="muted" style="text-align:center;">Loading…</p>';
+      try{
+        const res = await fetch('/api/order-status?list=1&token=' + encodeURIComponent(TOKEN));
+        const data = await res.json();
+        if(!res.ok){ alert(data.error||'Could not load orders'); return; }
+        renderOrders(data.orders||[]);
+      }catch(e){ alert('Network error: '+e.message); }
+    }
+
+    function renderOrders(orders){
+      $('emptyMsg').hidden = orders.length>0;
+      if(!orders.length){ $('ordersList').innerHTML=''; return; }
+      $('ordersList').innerHTML = orders.map(o=>{
+        const fullyPaid = o.depositPaid && o.balancePaid;
+        const canRequestBalance = !o.isOneShot && o.depositPaid && !o.balancePaid;
+        return `<div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div>
+              <h3 style="margin-bottom:4px;">${escapeHtml(o.clientName||'Client')} <span style="color:var(--muted-2);font-weight:500;font-size:.9rem;">· ${o.purposeLabel}${o.tier?' (Tier '+o.tier+')':''}</span></h3>
+              <p style="margin:0;font-size:.9rem;">${escapeHtml(o.clientEmail||'')} · Order <code>${escapeHtml(o.orderId)}</code></p>
+              <p style="margin:6px 0 0;font-size:.9rem;">Total ${fmt(o.totalCost)} · ${o.isOneShot?'one-shot':'deposit '+fmt(o.depositAmount)}</p>
+            </div>
+            <div style="text-align:right;">
+              ${badge('Deposit', o.depositPaid)} ${o.isOneShot?'':badge('Balance', o.balancePaid)}
+              <div style="margin-top:8px;">${fullyPaid?'<span class="btn btn-light" style="cursor:default;">Fully paid ✅</span>':''}</div>
+            </div>
+          </div>
+          ${canRequestBalance?`
+            <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+              <button class="btn btn-pop" data-balance="${escapeHtml(o.orderId)}">✅ Mark service finished &amp; request balance</button>
+              <span class="muted" style="font-size:.85rem;">After finalizing the website, click this to notify the client to pay.</span>
+            </div>
+            <div id="balout-${escapeHtml(o.orderId)}" style="margin-top:14px;"></div>
+          `:''}
+        </div>`;
+      }).join('');
+
+      // wire up balance buttons
+      document.querySelectorAll('[data-balance]').forEach(btn=>{
+        btn.addEventListener('click', async ()=>{
+          const oid = btn.dataset.balance;
+          btn.disabled = true; btn.textContent = 'Creating…';
+          try{
+            const res = await fetch('/api/create-balance-checkout',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':TOKEN},body:JSON.stringify({orderId:oid})});
+            const data = await res.json();
+            if(!res.ok){ alert(data.error||'Could not create balance link'); btn.disabled=false; btn.textContent='✅ Mark service finished & request balance'; return; }
+            const out = $('balout-'+oid);
+            const clientEmail = data.clientEmail || '';
+            const subject = encodeURIComponent('Your website is ready! 🎉 Time to complete your payment');
+            const link = encodeURIComponent(data.checkoutUrl);
+            const mailBody = encodeURIComponent(
+              `Hi ${data.clientName||''},\n\n` +
+              `Great news — your website is finished and ready!\n\n` +
+              `You're all good to go. To complete your project, please pay the remaining balance of ${data.balanceAmount} using the secure link below:\n\n` +
+              `${data.checkoutUrl}\n\n` +
+              `Once your payment is confirmed, I'll finalize and hand over everything. If you have any questions, just reply to this email.\n\n` +
+              `Thank you for trusting KenSaMa!\n\n` +
+              `Best regards,\n` +
+              `Kenneth @ KenSaMa`
+            );
+            const mailto = clientEmail ? `mailto:${clientEmail}?subject=${subject}&body=${mailBody}` : '';
+            out.innerHTML = `<div class="callout">
+              <strong>Your website is finished — notify ${escapeHtml(data.clientName)}</strong>
+              <p style="font-size:.9rem;margin-top:6px;">Balance due: <strong>${escapeHtml(data.balanceAmount)}</strong></p>
+              <div class="btn-row" style="margin:10px 0;">
+                ${mailto ? `<a class="btn btn-pop" href="${escapeHtml(mailto)}">📧 Email client to pay balance</a>` : '<span class="muted" style="font-size:.85rem;">No client email on file.</span>'}
+                <button class="btn btn-outline" onclick="navigator.clipboard&&navigator.clipboard.writeText('${escapeHtml(data.checkoutUrl)}');alert('Copied!')">Copy link</button>
+                <a class="btn btn-primary" href="${escapeHtml(data.checkoutUrl)}" target="_blank" rel="noopener">Open</a>
+              </div>
+              <input class="form-control" value="${escapeHtml(data.checkoutUrl)}" readonly onclick="this.select()" />
+              <p class="muted" style="font-size:.85rem;margin-top:8px;">Click "Email client" — it opens your mail app with the message ready. Just hit Send. ${clientEmail ? '' : '(Add the client email first.)'}</p>
+            </div>`;
+          }catch(e){ alert('Error: '+e.message); btn.disabled=false; btn.textContent='✅ Mark service finished & request balance'; }
+        });
+      });
+    }
+
+    function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    $('loginBtn').addEventListener('click', async ()=>{
+      const t = $('adminToken').value.trim();
+      if(!t){ $('loginError').textContent='Please enter your admin token.'; return; }
+      TOKEN = t;
+      $('loginError').textContent='';
+      try{
+        const res = await fetch('/api/order-status?list=1&token='+encodeURIComponent(TOKEN));
+        if(res.status===401){ $('loginError').textContent='Invalid token.'; TOKEN=''; return; }
+        $('loginCard').hidden = true;
+        $('ordersWrap').hidden = false;
+        loadOrders();
+      }catch(e){ $('loginError').textContent='Network error.'; }
+    });
+
+    $('refreshBtn').addEventListener('click', loadOrders);
+    $('logoutBtn').addEventListener('click', ()=>{ TOKEN=''; $('ordersWrap').hidden=true; $('loginCard').hidden=false; $('adminToken').value=''; });
+  </script>
+</body>
+</html>
